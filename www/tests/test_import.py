@@ -49,3 +49,51 @@ assert foo.get_bar() == 'bar'
 
 print('passed all tests')
 
+# test meta finders
+
+mod_name = 'baz'
+mod_code = '''
+def get_baz():
+    return "baz"
+'''
+
+from importlib.machinery import ModuleSpec, VfsImporter
+
+class NaiveMetaFinder:
+    '''
+    Meta importer able to load a module having name and code defined by
+    mod_name and mod_code global variables , respectively .
+    '''
+    def find_spec(self, fullname, path, prev_module):
+        if fullname != mod_name:
+            return None
+        # Here we reuse built-in VFS meta finder
+        spec = ModuleSpec(name=fullname,
+                          loader=VfsImporter,
+                          origin='test_import',
+                          loader_state=[
+                                        # module extension
+                                        '.py',
+                                        # module code
+                                        mod_code,
+                                        # is package ?
+                                        False])
+        spec.has_location = False
+        return spec
+
+# install meta finder
+sys.meta_path.insert(0, NaiveMetaFinder())
+
+import baz
+assert baz.get_baz() == "baz"
+
+# Change value of global var
+mod_name = 'foobar'
+mod_code = '''
+def get_foobar():
+    return "foobar"
+'''
+import foobar
+assert foobar.get_foobar() == "foobar"
+assert foobar is not baz
+
