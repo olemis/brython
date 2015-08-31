@@ -84,3 +84,35 @@ def load_brython_test_cases():
             )
 
 
+class DeferredTestError(unittest.TestCase):
+    """Dummy test case used to keep track of failures at test module
+    import time.
+    """
+    def __init__(self, exc):
+        """@param exc : Exception that will be raised in test case body.
+        """
+        unittest.TestCase.__init__(self, 'runTests')
+        self.exc = exc
+
+    def runTests(self):
+        raise self.exc
+
+
+def load_cpython_test_cases():
+    suite = unittest.TestSuite()
+    loader = unittest.defaultTestLoader
+    for modnm in utils.discover_cpython_test_modules():
+        label =  'CPython : test.' + modnm
+        try:
+            __import__('test.' + modnm)
+        except ImportError as exc:
+            print('Could not import test module ' + modnm)
+            suite.addTest(NamedTestSuite(label,
+                                         [DeferredTestError(exc)]))
+        else:
+            print('Test module ' + modnm + ' imported ok')
+            suite.addTest(NamedTestSuite(label,
+                                         [loader.loadTestsFromName('test.' + modnm)]))
+
+    return suite
+

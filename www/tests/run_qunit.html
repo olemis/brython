@@ -71,9 +71,13 @@ _QUnit = JSObject(window.QUnit)
 # TODO: Arg values e.g. verbosity level ?
 result = test_utils.OneTimeTestResult()
 
-def qunit_add_tests(suite):
-    module_name = getattr(suite, 'caption', None) or 'All tests'
-    _QUnit.module(module_name)
+def qunit_add_tests(suite, caption=None):
+    # FIXME : Unpredictable module behavior in case of
+    # a) nested named suites
+    # b) test cases not wrapped by named test suite
+    module_name = getattr(suite, 'caption', None)
+    if module_name is not None or caption is not None:
+        _QUnit.module(module_name)
     pend = []
     for test in suite:
         if isinstance(test, unittest.BaseTestSuite):
@@ -81,11 +85,13 @@ def qunit_add_tests(suite):
         else:
             _QUnit.test(test.shortDescription(),
                         window.qunit_unittest_wrapper(test, result))
-    for suite in pend:
-        qunit_add_tests(suite)
+    for s in pend:
+        # FIXME: What about class-level and module level setup/tearDown ?
+        qunit_add_tests(s, module_name)
 
 
 qunit_add_tests(test_utils.load_brython_test_cases())
+qunit_add_tests(test_utils.load_cpython_test_cases())
 </script>
 
   </body>
