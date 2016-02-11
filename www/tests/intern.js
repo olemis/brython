@@ -17,8 +17,8 @@ client.html e.g. http://localhost/intern/client.html?amdLoader=http://localhost/
   var stk = new Error().stack.split('\n');
       idx = 0;
   for (var i in stk) {
-    if (!stk[i].match(/http[s]:\/\//)) continue;
-    idx = Number(i) + 2;
+    if (!stk[i].match(/http[s]?:\/\//)) continue;
+    idx = Number(i) + 1;
     break;
   }
   var path_parts = stk[idx].match(/((http[s]?:\/\/.+\/)([^\/]+\.js)):/),
@@ -30,10 +30,11 @@ client.html e.g. http://localhost/intern/client.html?amdLoader=http://localhost/
                                      (amd_loader_arg? amd_loader_arg[1] :
                                                       path_requirejs_cdn)};
       cfg_loader_options = {baseUrl: 'src/amd',
-                            paths: {'brython_tests' : 'tests/amd/brython_tests'}}
+                            paths: {'brython_tests' : '../../tests/amd/brython_tests'}}
 
   define({
     basePath: path_base,
+    suites: ['brython_tests/tkn'],
     // Intern 2.0
     useLoader: cfg_loader,
     loader: cfg_loader_options,

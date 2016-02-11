@@ -91,8 +91,8 @@ define(function() {
           encoding = undefined, pos = [], text = '', ilevel = 0, ind = 0;
 
       if (match) {
-        var encodings = ['UTF-8', 'UTF-16', 'UTF-32', 'UTF-7',
-                         'UTF-1', 'UTF-EBCDIC', 'SCSU', 'BOCU-1', 'GB-18030'];
+        var encodings = ['utf-8', 'utf-16', 'utf-32', 'utf-7',
+                         'utf-1', 'utf-ebcdic', 'scsu', 'bocu-1', 'gb-18030'];
         for (var i = 0; i < encodings.length; ++ i) {
           if (match[i]) {
             encoding = encodings[i];
@@ -124,7 +124,7 @@ define(function() {
           self._lpos = re.lastIndex;
         }
         else {
-          yield [PyLex.token_types.ENCODING, 'UTF-8', [0,0], [0,0], 0]
+          yield [PyLex.token_types.ENCODING, 'utf-8', [0,0], [0,0], 0]
         }
       }
       var not_eof = t;
@@ -211,6 +211,7 @@ define(function() {
           else {
             while (this._indents.pop() > 0)
               yield this.text_token(PyLex.token_types.DEDENT, null, '', t);
+            yield this.text_token(PyLex.token_types.ENDMARKER, null, '', t);
           }
           not_eof = false;
         }
