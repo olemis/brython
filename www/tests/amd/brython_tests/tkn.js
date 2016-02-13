@@ -3,6 +3,11 @@
            'intern!tdd', 'intern/chai!assert', 'intern/chai!expect'],
           function(tkn, util, tdd, assert, expect) {
 
+            var token_types_rev = {};
+            for (var nm in tkn.token_types) {
+              token_types_rev[tkn.token_types[nm]] = nm;
+            }
+
             function assert_token_match(tkn_expected, tkn_actual, index) {
               var prefix = "Token " + index + " : ";
               assert.equal(tkn_actual.length, 5,
@@ -16,7 +21,9 @@
 
               assert.equal(tkn_actual[0], tkn.token_types[match[5]],
                            prefix + "Token type expected "+ match[5] + "(" +
-                           tkn.token_types[match[5]] + ") but got " + tkn_actual[0]);
+                           tkn.token_types[match[5]] + ") but got " +
+                           token_types_rev[tkn_actual[0]] +
+                           " (" +tkn_actual[0] + ")");
               // CPython always binds DEDENT tokens to an empty string
               // For our convinience values bound to DEDENT tokens are the
               // matched whitespace sequences
