@@ -143,9 +143,11 @@
               // FIXME: Condition to emit token for logical line
               if (this._delims == 0 && !this._isblank) {
                 yield this.newline(t, text);
+                this.crlf();
                 ++this._line;
               }
-              yield this.newline(f, text);
+              else
+                yield this.newline(f, text);
             }
             else if (text = match[2]) {
               ++this._row; this._col = 0;
