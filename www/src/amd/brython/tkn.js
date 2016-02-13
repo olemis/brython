@@ -154,10 +154,10 @@
               var comment = text.replace(/[\r\n]+$/, '');
               yield this.text_token(PyLex.token_types.COMMENT, null, comment);
               if (comment.length < text.length) {
-                yield this.newline(!this._isblank && this._delims == 0,
-                                   text.slice(comment.length))
+                ind = !this._isblank && this._delims == 0;
+                yield this.newline(ind, text.slice(comment.length))
+                if (ind) this.crlf();
               }
-              ++this._row; this._col = 0;
             }
             else if (text = match[4]) {
               if (this._col == 0 && this._delims == 0 && !prev_line_join) {
