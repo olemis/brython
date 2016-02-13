@@ -185,8 +185,11 @@
                   else yield this.text_token(PyLex.token_types.ERRORTOKEN,
                                              null, text, t);
                 }
+                else 
+                  this._col += text.length;
               }
-              this._col += text.length;
+              else
+                this._col += text.length;
             }
             else if (text = match[5]) {
               yield this.text_token(PyLex.token_types.NAME, null, text);
@@ -221,6 +224,9 @@
                                     null, 'EOF missmatch');
             }
             else {
+              if (!this._isblank)
+                yield this.newline(t, '\n')
+              ++this._row; this._col = 0;
               while (this._indents.pop() > 0)
                 yield this.text_token(PyLex.token_types.DEDENT, null, '', t);
               yield this.text_token(PyLex.token_types.ENDMARKER, null, '', t);
