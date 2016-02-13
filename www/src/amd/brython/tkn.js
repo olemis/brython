@@ -46,7 +46,8 @@
       newline: function(islogical, sep, pos) {
         var start = pos || [this._row, this._col],
             end = [start[0], start[1] + sep.length],
-            tkn = [PyLex[(islogical)? 'NEWLINE':'NL'], sep, start, end];
+            tkn = [PyLex.token_types[(islogical)? 'NEWLINE':'NL'], sep,
+                   start, end, this._line];
         if (islogical) ++this._line;
         else this.crlf();
         return tkn;
@@ -79,7 +80,7 @@
                          '|(?:"""(?:(?:\\\\.)|(?:[\\x00-\\x21]|[\\x22-\\x5b]|[\\x5d-\\xFF]))+?""")' +
                          '|(?:"(?:(?:\\\\.)|(?:[\\x00-\\x09]|[\\x0b-\\x0c]|[\\x0e-\\x21]|[\\x23-\\x5b]|[\\x5d-\\xFF]))*")'+
                          "|(?:'(?:(?:\\\\.)|(?:[\\x00-\\x09]|[\\x0b-\\x0c]|[\\x0e-\\x26]|[\\x28-\\x5b]|[\\x5d-\\xFF]))*'))",
-            re = '(?:(\\r\\n|\\r|\\n)|([\\\\](?:\\r\\n|\\r|\\n))|(#[^\\r\\n]*)|(\\s+)|('+
+            re = '(?:(\\r\\n|\\r|\\n)|([\\\\](?:\\r\\n|\\r|\\n))|(#[^\\r\\n]*(?:[\\r\\n]|\\r\\n)?)|(\\s+)|('+
                  re_id +')|((?:'+ re_str +')|(?:'+ re_bytes +'))|('+ re_ops +
                  ')|([$?`])|('+ re_number +'))';
         return new RegExp(re, 'gm');
@@ -112,13 +113,14 @@
             yield [PyLex.token_types.ENCODING, encoding, [0,0], [0,0], 0]
             if (match[1]) {
               text = match[1];
-              pos = [1,text.length - 1]
+              pos = [1,text.length];
               yield [PyLex.token_types.COMMENT, text, [1,0], pos, 1];
-              yield this.newline(f, match[2], [0,text.length - 1]);
+              yield this.newline(f, match[2], [1,text.length - 1]);
+              ++this._row;
             }
             text = match[3];
             yield [PyLex.token_types.COMMENT, text, [this._row,0],
-                                                    [this._row,text.length - 1], 1];
+                                                    [this._row,text.length], 1];
             if (text = match[5]) {
               yield this.newline(f, match[2], [0,text.length - 1]);
             }
@@ -128,7 +130,8 @@
             yield [PyLex.token_types.ENCODING, 'utf-8', [0,0], [0,0], 0]
           }
         }
-        var not_eof = t;
+        var not_eof = t,
+            prev_line_join = f;
         // TODO: Unicode chars in names (identifiers + keywords)
         var RE_LOGLINE = this.get_logline_re();
         while (not_eof) {
@@ -146,13 +149,19 @@
               yield this.newline(f, text);
             }
             else if (text = match[2]) {
-              this._row += 1; this._col = 0;
+              ++this._row; this._col = 0;
             }
             else if (text = match[3]) {
-              yield this.text_token(PyLex.token_types.COMMENT, null, text)
+              var comment = text.replace(/[\r\n]+$/, '');
+              yield this.text_token(PyLex.token_types.COMMENT, null, comment);
+              if (comment.length < text.length) {
+                yield this.newline(!this._isblank && this._delims == 0,
+                                   text.slice(comment.length))
+              }
+              ++this._row; this._col = 0;
             }
             else if (text = match[4]) {
-              if (this._col == 0) {
+              if (this._col == 0 && !prev_line_join) {
                 // TODO: Discard leading form feed char
                 if (text.indexOf('\t') >= 0) {
                   ind = text.replace(/\t/, '        ').length;
@@ -177,6 +186,7 @@
                                              null, text, t);
                 }
               }
+              this._col += text.length;
             }
             else if (text = match[5]) {
               yield this.text_token(PyLex.token_types.NAME, null, text);
@@ -203,6 +213,7 @@
             }
             // FIXME: Redundant?
             this._lpos = re.lastIndex;
+            prev_line_join = Boolean(match[2]);
           }
           else {
             if (this._lpos != this._currString.length) {
