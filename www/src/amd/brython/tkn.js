@@ -106,7 +106,7 @@
           yield [PyLex.token_types.ENCODING, encoding, [0,0], [0,0], 0]
         }
         else {
-          re = /^(?:(#.*?)(\r|\n|\r\n))?(#.*coding[=:]\s*([-\w.]+).*?)(\r|\n|\r\n)?/gm
+          re = /^(?:(#.*?)(\r|\n|\r\n))?(#.*coding[=:]\s*([-\w.]+).*)(\r|\n|\r\n)?/gm
           match = this.trymatch(re);
           if (match) {
             encoding = match[4];
@@ -115,14 +115,13 @@
               text = match[1];
               pos = [1,text.length];
               yield [PyLex.token_types.COMMENT, text, [1,0], pos, 1];
-              yield this.newline(f, match[2], [1,text.length - 1]);
-              ++this._row;
+              yield this.newline(f, match[2], [1,text.length]);
             }
             text = match[3];
             yield [PyLex.token_types.COMMENT, text, [this._row,0],
                                                     [this._row,text.length], 1];
-            if (text = match[5]) {
-              yield this.newline(f, match[2], [0,text.length - 1]);
+            if (match[5]) {
+              yield this.newline(f, match[5], [this._row,text.length]);
             }
             self._lpos = re.lastIndex;
           }
