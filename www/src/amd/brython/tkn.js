@@ -123,7 +123,7 @@
             if (match[5]) {
               yield this.newline(f, match[5], [this._row,text.length]);
             }
-            self._lpos = re.lastIndex;
+            this._lpos = re.lastIndex;
           }
           else {
             yield [PyLex.token_types.ENCODING, 'utf-8', [0,0], [0,0], 0]
@@ -160,7 +160,7 @@
               ++this._row; this._col = 0;
             }
             else if (text = match[4]) {
-              if (this._col == 0 && !prev_line_join) {
+              if (this._col == 0 && this._delims == 0 && !prev_line_join) {
                 // TODO: Discard leading form feed char
                 if (text.indexOf('\t') >= 0) {
                   ind = text.replace(/\t/, '        ').length;
