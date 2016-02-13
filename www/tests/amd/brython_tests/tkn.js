@@ -17,10 +17,15 @@
               assert.equal(tkn_actual[0], tkn.token_types[match[5]],
                            prefix + "Token type expected "+ match[5] + "(" +
                            tkn.token_types[match[5]] + ") but got " + tkn_actual[0]);
-              var str_literal = "'" + util.escape_string(tkn_actual[1]) + "'";
-              assert.equal(str_literal, match[6],
-                           prefix + "Matched value expected "+ match[6] +
-                           " but got " + str_literal);
+              // CPython always binds DEDENT tokens to an empty string
+              // For our convinience values bound to DEDENT tokens are the
+              // matched whitespace sequences
+              if (tkn_actual[0] != tkn.token_types.DEDENT) {
+                var str_literal = "'" + util.escape_string(tkn_actual[1]) + "'";
+                assert.equal(str_literal, match[6],
+                             prefix + "Matched value expected "+ match[6] +
+                             " but got " + str_literal);
+              }
               expect(tkn_actual[2]).to.deep.equal(
                               [parseInt(match[1]), parseInt(match[2])],
                               prefix + "Start position expected " +
@@ -78,10 +83,10 @@
                     [
                         "0,0-0,0:            ENCODING       'ascii'",
                         "1,0-1,21:           COMMENT        '#!/usr/bin/env python'",
-                        "1,21-1,22:          NL             '\n'",
+                        "1,21-1,22:          NL             '\\n'",
                         "2,0-2,23:           COMMENT        '# -*- coding: ascii -*-'",
-                        "2,23-2,24:          NL             '\n'",
-                        "3,0-3,1:            NL             '\n'",
+                        "2,23-2,24:          NL             '\\n'",
+                        "3,0-3,1:            NL             '\\n'",
                         "4,0-4,11:           NAME           'month_names'",
                         "4,12-4,13:          OP             '='",
                         "4,14-4,15:          OP             '['",
@@ -92,7 +97,7 @@
                         "4,38-4,45:          STRING         \"'Maart'\"",
                         "4,45-4,46:          OP             ','",
                         "4,47-4,62:          COMMENT        '# These are the'",
-                        "4,62-4,63:          NL             '\n'",
+                        "4,62-4,63:          NL             '\\n'",
                         "5,15-5,22:          STRING         \"'April'\"",
                         "5,22-5,23:          OP             ','",
                         "5,24-5,29:          STRING         \"'Mei'\"",
@@ -100,7 +105,7 @@
                         "5,31-5,37:          STRING         \"'Juni'\"",
                         "5,37-5,38:          OP             ','",
                         "5,39-5,52:          COMMENT        '# Dutch names'",
-                        "5,52-5,53:          NL             '\n'",
+                        "5,52-5,53:          NL             '\\n'",
                         "6,15-6,21:          STRING         \"'Juli'\"",
                         "6,21-6,22:          OP             ','",
                         "6,23-6,33:          STRING         \"'Augustus'\"",
@@ -108,7 +113,7 @@
                         "6,35-6,46:          STRING         \"'September'\"",
                         "6,46-6,47:          OP             ','",
                         "6,48-6,64:          COMMENT        '# for the months'",
-                        "6,64-6,65:          NL             '\n'",
+                        "6,64-6,65:          NL             '\\n'",
                         "7,15-7,24:          STRING         \"'Oktober'\"",
                         "7,24-7,25:          OP             ','",
                         "7,26-7,36:          STRING         \"'November'\"",
@@ -116,23 +121,23 @@
                         "7,38-7,48:          STRING         \"'December'\"",
                         "7,48-7,49:          OP             ']'",
                         "7,50-7,63:          COMMENT        '# of the year'",
-                        "7,63-7,64:          NEWLINE        '\n'",
-                        "8,0-8,1:            NL             '\n'",
+                        "7,63-7,64:          NEWLINE        '\\n'",
+                        "8,0-8,1:            NL             '\\n'",
                         "9,0-9,3:            NAME           'def'",
                         "9,4-9,5:            NAME           'x'",
                         "9,5-9,6:            OP             '('",
                         "9,6-9,7:            OP             ')'",
                         "9,7-9,8:            OP             ':'",
-                        "9,8-9,9:            NEWLINE        '\n'",
+                        "9,8-9,9:            NEWLINE        '\\n'",
                         "10,0-10,4:          INDENT         '    '",
                         "10,4-10,5:          NAME           'a'",
                         "10,6-10,7:          OP             '='",
                         "11,4-13,13:         STRING         '\"\"\"eyruyetruyt \\\n       ferhugf\n     233ew\"\"\"'",
                         "13,14-13,20:        STRING         \"'erty'\"",
                         "13,21-13,30:        COMMENT        '# Comment'",
-                        "13,30-13,31:        NEWLINE        '\n'",
+                        "13,30-13,31:        NEWLINE        '\\n'",
                         "14,4-14,8:          NAME           'pass'",
-                        "14,8-14,9:          NEWLINE        '\n'",
+                        "14,8-14,9:          NEWLINE        '\\n'",
                         "15,4-15,5:          NAME           'c'",
                         "15,6-15,7:          OP             '='",
                         "15,8-15,9:          OP             '('",
@@ -142,21 +147,21 @@
                         "15,15-15,16:        OP             '['",
                         "15,17-15,18:        OP             ')'",
                         "15,19-15,20:        OP             ']'",
-                        "15,20-15,21:        NEWLINE        '\n'",
+                        "15,20-15,21:        NEWLINE        '\\n'",
                         "16,4-16,5:          NAME           'b'",
                         "16,6-16,7:          OP             '='",
                         "16,8-17,20:         STRING         \"b'''wqdewoefoi\\2\n        wqe34rfy6'''\"",
-                        "17,20-17,21:        NEWLINE        '\n'",
+                        "17,20-17,21:        NEWLINE        '\\n'",
                         "18,4-18,6:          NAME           'if'",
                         "18,7-18,8:          NAME           'x'",
                         "18,8-18,9:          OP             ':'",
-                        "18,9-18,10:         NEWLINE        '\n'",
+                        "18,9-18,10:         NEWLINE        '\\n'",
                         "19,0-19,8:          INDENT         '        '",
                         "19,8-19,14:         NAME           'return'",
                         "19,15-19,16:        NUMBER         '3'",
-                        "19,16-19,17:        NEWLINE        '\n'",
-                        "20,0-20,1:          NL             '\n'",
-                        "21,0-21,1:          NL             '\n'",
+                        "19,16-19,17:        NEWLINE        '\\n'",
+                        "20,0-20,1:          NL             '\\n'",
+                        "21,0-21,1:          NL             '\\n'",
                         "22,0-22,0:          DEDENT         ''",
                         "22,0-22,0:          DEDENT         ''",
                         "22,0-22,0:          ENDMARKER      ''"
@@ -213,23 +218,14 @@
                       "3,43-3,45:          NUMBER         '60'",
                       "3,45-3,46:          OP             ':'",
                       "3,47-3,72:          COMMENT        '# Looks like a valid date'",
-                      "3,72-3,73:          NEWLINE        '\n'",
+                      "3,72-3,73:          NEWLINE        '\\n'",
                       "4,0-4,8:            INDENT         '        '",
                       "4,8-4,14:           NAME           'return'",
                       "4,15-4,16:          NUMBER         '1'",
-                      "4,16-4,17:          NEWLINE        '\n'",
+                      "4,16-4,17:          NEWLINE        '\\n'",
                       "5,0-5,0:            DEDENT         ''",
                       "5,0-5,0:            ENDMARKER      ''"
                     ]);
-                });
-
-                tdd.test('Tokenizer - LangRef - Explicit line joining', function() {
-                });
-
-                tdd.test('Tokenizer - LangRef - Explicit line joining', function() {
-                });
-
-                tdd.test('Tokenizer - LangRef - Explicit line joining', function() {
                 });
 
                 tdd.test('Tokenizer - LangRef - Explicit line joining', function() {
