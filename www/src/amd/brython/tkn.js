@@ -66,7 +66,7 @@
 
       get_logline_re: function() {
         // FIXME: Identifiers with Unicode chars
-        var re_id = '[a-zA-Z_]\\w*',
+        var re_id = '(?!(?:[uU]|[bB][rR]?|[rR][bB]?)?[\'"])[a-zA-Z_]\\w*',
             re_ops = '(?:(?:(?:(?://|[*][*]|<<|>>)|[@=+\\-*/%&|^<>])=?)|[\\[\\](){},:;~]|[!]=|->|(?:[.](?:[.][.])?))',
             re_number = '(?:0(?:0*|[oO][0-7]+|[xX][0-9a-fA-F]+|[bB][01]+)'+
                         '|(?:[1-9]\\d*[.]?|(?:[1-9]\\d*)?[.]\d+)(?:[eE]?[+-]?\\d+)?)',
@@ -248,9 +248,10 @@
                                     null, 'EOF missmatch');
             }
             else {
-              if (!this._isblank)
+              if (!this._isblank) {
                 yield this.newline(t, '\n')
-              ++this._row; this._col = 0;
+                ++this._row; this._col = 0;
+              }
               while (this._indents.pop() > 0)
                 yield this.text_token(PyLex.token_types.DEDENT, null, '', t);
               yield this.text_token(PyLex.token_types.ENDMARKER, null, '', t);
