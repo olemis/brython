@@ -58,6 +58,7 @@
         var tkn = [tkntype, text, [this._row, this._col],
                                   endpos, this._line];
         tkn.exact_type = exact || tkntype;
+        this._row = endpos[0];
         this._col = endpos[1];
         if (!isblank) this._isblank = f;
         return tkn;
@@ -69,19 +70,8 @@
             re_ops = '(?:(?:(?:(?://|[*][*]|<<|>>)|[@=+\\-*/%&|^<>])=?)|[\\[\\](){},:;~]|[!]=|->|(?:[.](?:[.][.])?))',
             re_number = '(?:0(?:0*|[oO][0-7]+|[xX][0-9a-fA-F]+|[bB][01]+)'+
                         '|(?:[1-9]\\d*[.]?|(?:[1-9]\\d*)?[.]\d+)(?:[eE]?[+-]?\\d+)?)',
-            re_str = '[rRuU]?(?:'+
-                               "(?:'''(?:(?:[\\\\].)|[^\\\\])+?''')"+
-                              '|(?:"""(?:(?:[\\\\].)|[^\\\\])+?""")'+
-                              '|(?:"(?:(?:\\\\.)|[^\\n\\r\\\\"])*")'+
-                              "|(?:'(?:(?:\\\\.)|[^\\n\\r\\\\'])*'))",
-            re_bytes = '(?:(?:[bB][rR]?)|(?:[rR][bB]))'+
-                       '(?:'+
-                          "(?:'''(?:(?:\\\\.)|(?:[\\x00-\\x26]|[\\x28-\x5b]|[\\x5d-\xFF]))+?''')"+
-                         '|(?:"""(?:(?:\\\\.)|(?:[\\x00-\\x21]|[\\x22-\\x5b]|[\\x5d-\\xFF]))+?""")' +
-                         '|(?:"(?:(?:\\\\.)|(?:[\\x00-\\x09]|[\\x0b-\\x0c]|[\\x0e-\\x21]|[\\x23-\\x5b]|[\\x5d-\\xFF]))*")'+
-                         "|(?:'(?:(?:\\\\.)|(?:[\\x00-\\x09]|[\\x0b-\\x0c]|[\\x0e-\\x26]|[\\x28-\\x5b]|[\\x5d-\\xFF]))*'))",
             re = '(?:(\\r\\n|\\r|\\n)|([\\\\](?:\\r\\n|\\r|\\n))|(#[^\\r\\n]*(?:[\\r\\n]|\\r\\n)?)|(\\s+)|('+
-                 re_id +')|((?:'+ re_str +')|(?:'+ re_bytes +'))|('+ re_ops +
+                 re_id + ')|((?:[uU]|[bB][rR]?|[rR][bB]?)?[\'"])|('+ re_ops +
                  ')|([$?`])|('+ re_number +'))';
         return new RegExp(re, 'gm');
       },
@@ -132,14 +122,22 @@
         var not_eof = t,
             prev_line_join = f;
         // TODO: Unicode chars in names (identifiers + keywords)
-        var RE_LOGLINE = this.get_logline_re();
+        var RE_LOGLINE = this.get_logline_re(),
+            RE_STRSQ = [/''(?:(?:[\\](?:.|[\n\r]))|[^\\])*'''/gm,
+                        /(?:(?:\\.)|[^\n\r\\'])*'/gm],
+            RE_STRDQ = [/""(?:(?:[\\](?:.|[\n\r]))|[^\\])*"""/gm,
+                        /(?:(?:\\.)|[^\n\r\\"])*"/gm],
+            RE_BYTSQ = [/''(?:(?:\\.)|(?:[\x00-\x26]|[\x28-\x5b]|[\x5d-\xFF]))*'''/gm,
+                        /(?:(?:\\.)|(?:[\x00-\x09]|[\x0b-\x0c]|[\x0e-\x26]|[\x28-\x5b]|[\x5d-\xFF]))*'/gm],
+            RE_BYTDQ = [/""(?:(?:\\.)|(?:[\x00-\x21]|[\x22-\x5b]|[\x5d-\xFF]))*"""/gm, 
+                        /(?:(?:(?:\\.)|(?:[\x00-\x09]|[\x0b-\x0c]|[\x0e-\x21]|[\x23-\x5b]|[\x5d-\xFF]))*")/gm];
         while (not_eof) {
           re = RE_LOGLINE;
           // FIXME: Redundant?
           re.lastIndex = this._lpos;
           match = this.trymatch(re);
           if (match) {
-            if (text = match[1]) {
+            if (text = match[1]) { // New-line char
               // FIXME: Condition to emit token for logical line
               if (this._delims == 0 && !this._isblank) {
                 yield this.newline(t, text);
@@ -149,10 +147,10 @@
               else
                 yield this.newline(f, text);
             }
-            else if (text = match[2]) {
+            else if (text = match[2]) { // Explicit line joining
               ++this._row; this._col = 0;
             }
-            else if (text = match[3]) {
+            else if (text = match[3]) { // Comment
               var comment = text.replace(/[\r\n]+$/, '');
               yield this.text_token(PyLex.token_types.COMMENT, null, comment);
               if (comment.length < text.length) {
@@ -161,7 +159,7 @@
                 if (ind) this.crlf();
               }
             }
-            else if (text = match[4]) {
+            else if (text = match[4]) { // Whitespace
               if (this._col == 0 && this._delims == 0 && !prev_line_join) {
                 // TODO: Discard leading form feed char
                 if (text.indexOf('\t') >= 0) {
@@ -192,27 +190,52 @@
               else
                 this._col += text.length;
             }
-            else if (text = match[5]) {
+            else if (text = match[5]) { // Name or ID
               yield this.text_token(PyLex.token_types.NAME, null, text);
             }
-            else if (text = match[6]) {
-              var re_ln = /[\r\n]|(?:\r\n)/gm;
-              ind = 0;
-              while (re_ln.exec(text)) ++ind;
-              var endpos = (ind > 0)? [this._row + ind,
-                                       this._col + text.length - re_ln.lastIndex]:
-                                      undefined;
-              yield this.text_token(PyLex.token_types.STRING, null, text, f, endpos);
+            else if (text = match[6]) { // String
+              this._lpos = re.lastIndex;
+              var res = (text.includes('b') || text.includes('B'))?
+                        ((text.slice(-1) == "'")? RE_BYTSQ: RE_BYTDQ) :
+                        ((text.slice(-1) == "'")? RE_STRSQ: RE_STRDQ);
+              for (var i in res) {
+                re = res[i];
+                re.lastIndex = this._lpos;
+                match = this.trymatch(re);
+                if (match && match.index == this._lpos)
+                  break;
+                else
+                  match = null;
+              }
+              if (match) {
+                text += match[0];
+                var re_ln = /[\r\n]|(?:\r\n)/gm;
+                ind = 0;
+                var l = 0;
+                while (re_ln.exec(text)) { l = re_ln.lastIndex ; ++ind; }
+                var endpos = (ind > 0)? [this._row + ind, text.length - l]:
+                                        undefined;
+                yield this.text_token(PyLex.token_types.STRING, null, text, f, endpos);
+              }
+              else {
+                re.lastIndex = this._lpos;
+                if (text.length > 1) {
+                  yield this.text_token(PyLex.token_types.NAME, null,
+                                        text.slice(0, -1));
+                }
+                yield this.text_token(PyLex.token_types.ERRORTOKEN, null,
+                                      text.slice(-1));
+              }
             }
-            else if (text = match[7]) {
+            else if (text = match[7]) { // Ops
               ind = optkns[text];
               this._delims += ind[1]; if (!this._delims) this._delims = 0;
               yield this.text_token(PyLex.token_types.OP, PyLex[ind[0]], text)
             }
-            else if (text = match[8]) {
+            else if (text = match[8]) { // Bad char
               yield this.text_token(PyLex.token_types.ERRORTOKEN, null, text);
             }
-            else if (text = match[9]) {
+            else if (text = match[9]) { // Number
               yield this.text_token(PyLex.token_types.NUMBER, null, text);
             }
             // FIXME: Redundant?
