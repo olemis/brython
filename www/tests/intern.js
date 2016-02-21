@@ -47,13 +47,42 @@ client.html e.g. http://localhost/intern/client.html?amdLoader=http://localhost/
   }
 
   function node_params() {
-    return {};
+    // See stackoverflow:2976651
+    var stk = new Error().stack.split('\n');
+        idx = 0;
+    var path_parts = null;
+    for (idx in stk) {
+      if (!(path_parts = stk[idx].match(/at ((\/.+\/)([^\/]+\.js)):\d+:\d+$/))) continue;
+      break;
+    }
+    var path_base = (path_parts? path_parts[2]: '') + '../',
+        cwd_parts = process.cwd().split('/');
+    path_parts = path_base.split('/');
+    for (idx = 0, pl = path_parts.length, cwdl = cwd_parts.length;
+         idx < pl && idx < cwdl; ++idx) {
+      if (path_parts[idx] != cwd_parts) break;
+    }
+    var relpath = []
+    for (var i = idx; i < cwdl.length; ++i) relpath.push('..');
+    for (var i = idx; i < path_parts.length; ++i) relpath.push(path_parts[i]);
+    relpath = relpath.join('/');
+    var cfg_loader_options = {baseUrl: 'src/amd',
+                              paths: {'brython_tests' : '../../tests/amd/brython_tests'}}
+    return {basePath: relpath,
+            // Intern 2.0
+//            useLoader: cfg_loader,
+            loader: cfg_loader_options,
+            // Intern 3.0
+//            loaders: cfg_loader,
+            loaderOptions: cfg_loader_options}
   }
 
   define(function() {
     var params = (is_browser? browser_params: node_params)();
     params.suites = ['brython_tests/tkn'];
+    // See stackoverflow:31907152
+    params.excludeInstrumentation = /^(?:tests|node_modules)\//;
     return params;
-  })
+  });
 })()
 
