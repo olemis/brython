@@ -21,7 +21,6 @@ client.html e.g. http://localhost/intern/client.html?amdLoader=http://localhost/
     // See stackoverflow:2976651
     var stk = new Error().stack.split('\n');
         idx = 0;
-    console.log(stk);
     for (var i in stk) {
       if (!stk[i].match(/http[s]?:\/\//)) continue;
       idx = Number(i) + 1;
@@ -31,13 +30,13 @@ client.html e.g. http://localhost/intern/client.html?amdLoader=http://localhost/
         path_base = (path_parts? path_parts[2]: '') + '../',
         path_requirejs_cdn = 'https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.22/require.min.js',
         amd_loader_arg = location.search.match(/[?&]amdLoader=([^&]+)/),
-        cfg_loader = {'host-node' : 'requirejs',
-                      'host-browser' : this['amd']? amd.loader_path :
+        cfg_loader = {'host-browser' : this['amd']? amd.loader_path :
                                        (amd_loader_arg? amd_loader_arg[1] :
                                                         path_requirejs_cdn)};
-        cfg_loader_options = {baseUrl: 'src/amd',
-                              paths: {'brython_tests' : '../../tests/amd/brython_tests'}}
-    return {basePath: path_base,
+        cfg_loader_options = {baseUrl: path_base + 'src/amd',
+                              paths: {'brython_tests' : path_base + 'tests/amd/brython_tests'}}
+    console.log('Running browser tests from base path : ' + path_base);
+    return {basePath: '.',
             // Intern 2.0
             useLoader: cfg_loader,
             loader: cfg_loader_options,
@@ -66,14 +65,13 @@ client.html e.g. http://localhost/intern/client.html?amdLoader=http://localhost/
     for (var i = idx; i < cwdl.length; ++i) relpath.push('..');
     for (var i = idx; i < path_parts.length; ++i) relpath.push(path_parts[i]);
     relpath = relpath.join('/');
+    console.log('Running node tests from base path : ' + relpath);
     var cfg_loader_options = {baseUrl: 'src/amd',
                               paths: {'brython_tests' : '../../tests/amd/brython_tests'}}
     return {basePath: relpath,
             // Intern 2.0
-//            useLoader: cfg_loader,
             loader: cfg_loader_options,
             // Intern 3.0
-//            loaders: cfg_loader,
             loaderOptions: cfg_loader_options}
   }
 
